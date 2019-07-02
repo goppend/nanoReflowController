@@ -14,3 +14,6 @@
 [submodule "libraries/encoder"]
 	path = libraries/encoder
 	url = https://github.com/0xPIT/encoder
+[submodule "libraries/TimerOne"]
+	path = libraries/TimerOne
+	url = https://github.com/PaulStoffregen/TimerOne.git
