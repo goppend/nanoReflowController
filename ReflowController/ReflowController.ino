@@ -137,7 +137,7 @@ uint8_t zxLoopDelay = 0;
 
 // calibrate zero crossing: how many timerIsr happen within one zero crossing
 #define zxCalibrationLoops 128
-#define zxPerSecCalibrationTime 4000
+#define zxPerSecCalibrationTime 2000
 
 struct {
   volatile uint8_t iterations;
@@ -636,7 +636,6 @@ void loop(void)
           PID.SetControllerDirection(REVERSE);
           PID.SetTunings(fanPID.Kp, fanPID.Ki, fanPID.Kd);
           Setpoint = idleTemp;
-
         }
 
         if (Input < (idleTemp + 5)) {
@@ -660,7 +659,9 @@ void loop(void)
          // PIDTune.setpoint = 210.0; // is private inside PIDTune
 
           if (val != 0) {
-            currentState = CoolDown;
+            toggleAutoTune();
+            Setpoint = idleTemp;
+            Output = 0;
           }
 
           if (currentState != Tune) { // we're done, set the tuning parameters

@@ -85,7 +85,7 @@ void displaySplash() {
   // splash screen
   tft.setCursor(2, 30);
   tft.setTextSize(2);
-  tft.print("Reflow");
+  tft.print("nanoReflow");
   tft.setCursor(tft.width()-120, 48);
   tft.print("Controller");
   tft.setTextSize(1);
@@ -745,12 +745,14 @@ void updateProcessDisplay() {
   alignRightPrefix((int)heaterValue); 
   tft.print((int)heaterValue);
   tft.print('%');
-
+#ifdef WITH_FAN
   tft.print(" \x2a");
   alignRightPrefix((int)fanValue); 
   tft.print((int)fanValue);
   tft.print('%');
-
+#else
+  tft.print("     ");
+#endif
   tft.print(" \x12 "); // alternative: \x7f
   printDouble(rampRate);
   tft.print("\367C/s    ");

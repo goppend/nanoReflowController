@@ -1,9 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-//#define ALWAYS_FIRST_RUN
+//#define ALWAYS_FIRST_RUN // force resett to factory settings at startup
 //#define FAKE_HW 1
-#define PIDTUNE 1 // autotune wouldn't fit in the 28k available on my arduino pro micro.
+//#define PIDTUNE 1 // autotune wouldn't fit in the 28k available on my arduino pro micro.
 #define WITH_BEEPER // Enables Beeper
 //#define WITH_FAN // Enables Lid opening Servo (not yet implemented)
 //#define WITH_SERVO // Enables Lid opening Servo (not yet implemented)
