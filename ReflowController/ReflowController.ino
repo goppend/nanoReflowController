@@ -27,9 +27,10 @@
 #include <PID_AutoTune_v0.h>
 #endif
 // ----------------------------------------------------------------------------
+volatile uint32_t    lastTicks        = 0;
 volatile uint32_t    timerTicks       = 0;
 volatile uint8_t     phaseCounter     = 0;
-static const uint8_t TIMER1_PERIOD_US = 100;
+static const uint8_t TIMER1_PERIOD_US = 200;
 // ----------------------------------------------------------------------------
 uint32_t lastUpdate        = 0;
 uint32_t lastDisplayUpdate = 0;
@@ -80,8 +81,6 @@ void setupPins(void) {
 
 pinAsOutput(PIN_HEATER);
 digitalLow(PIN_HEATER); // off
-pinAsOutput(PIN_FAN);
-digitalHigh(PIN_FAN);
 pinAsInputPullUp(PIN_ZX);
 pinAsOutput(PIN_TC_CS);
 pinAsOutput(PIN_LCD_CS);
@@ -89,14 +88,19 @@ pinAsOutput(PIN_TC_CS);
 #ifdef WITH_BEEPER
     pinAsOutput(PIN_BEEPER);
 #endif
-
+#ifdef WITH_FAN
+  pinAsOutput(PIN_FAN);
+  digitalHigh(PIN_FAN);
+#endif
 }
 // ----------------------------------------------------------------------------
 void killRelayPins(void) {
 Timer1.stop();
 detachInterrupt(INT_ZX);
-digitalHigh(PIN_FAN);
-digitalHigh(PIN_HEATER);
+#ifdef WITH_FAN
+  digitalHigh(PIN_FAN);
+  digitalHigh(PIN_HEATER);
+#endif
 //PORTD |= (1 << PIN_HEATER) | (1 << PIN_FAN); // off
 }
 
@@ -104,10 +108,14 @@ digitalHigh(PIN_HEATER);
 // wave packet control: only turn the solid state relais on for a percentage 
 // of complete sinusoids (i.e. 1x 360°)
 
-#define CHANNELS       2
-#define CHANNEL_HEATER 0
-#define CHANNEL_FAN    1
-
+#ifdef WITH_FAN
+  #define CHANNELS       2
+  #define CHANNEL_HEATER 0
+  #define CHANNEL_FAN    1
+#else 
+  #define CHANNELS       1
+  #define CHANNEL_HEATER 0
+#endif
 typedef struct Channel_s {
   volatile uint8_t target; // percentage of on-time
   uint8_t state;           // current state counter
@@ -117,25 +125,28 @@ typedef struct Channel_s {
 } Channel_t;
 
 Channel_t Channels[CHANNELS] = {
-  // heater
-  { 0, 0, 0, false, PIN_HEATER }, 
-  // fan
-  { 0, 0, 0, false, PIN_FAN } 
+  { 0, 0, 0, false, PIN_HEATER } // heater
+#ifdef WITH_FAN
+  ,{ 0, 0, 0, false, PIN_FAN } // fan
+#endif  
 };
 
 // delay to align relay activation with the actual zero crossing
-uint16_t zxLoopDelay = 0;
+uint8_t zxLoopDelay = 0;
 
-#ifdef WITH_CALIBRATION
+
 // calibrate zero crossing: how many timerIsr happen within one zero crossing
 #define zxCalibrationLoops 128
+#define zxPerSecCalibrationTime 4000
+
 struct {
-  volatile int8_t iterations;
+  volatile uint8_t iterations;
   volatile uint8_t measure[zxCalibrationLoops];
 } zxLoopCalibration = {
   0, {}
 };
-#endif
+
+
 
 // ----------------------------------------------------------------------------
 //                             ZERO CROSSING ISR
@@ -164,11 +175,11 @@ void zeroCrossingIsr(void) {
 
   ch = ((ch + 1) % CHANNELS); // next channel
 
-#ifdef WITH_CALIBRATION
+
   if (zxLoopCalibration.iterations < zxCalibrationLoops) {
     zxLoopCalibration.iterations++;
   }
-#endif
+
 }
 
 // ----------------------------------------------------------------------------
@@ -177,23 +188,22 @@ void zeroCrossingIsr(void) {
 // timer interrupt handling
 
 void timerIsr(void) { // ticks with 100µS
-  static uint32_t lastTicks = 0;
 
   // phase control for the fan 
   if (++phaseCounter > 90) {
     phaseCounter = 0;
   }
-
+#ifdef WITH_FAN
   if (phaseCounter > Channels[CHANNEL_FAN].target) {
     digitalLow(Channels[CHANNEL_FAN].pin); 
   }
   else {
     digitalHigh(Channels[CHANNEL_FAN].pin);
   }
-
+#endif
   // wave packet control for heater
-  if (Channels[CHANNEL_HEATER].next > lastTicks // FIXME: this looses ticks when overflowing
-      && timerTicks > Channels[CHANNEL_HEATER].next) 
+  if ((Channels[CHANNEL_HEATER].next > lastTicks) // FIXME: this looses ticks when overflowing
+      && (timerTicks > Channels[CHANNEL_HEATER].next)) 
   {
     if (Channels[CHANNEL_HEATER].action) digitalLow(Channels[CHANNEL_HEATER].pin); //digitalWriteFast(Channels[CHANNEL_HEATER].pin, HIGH);
     else digitalHigh(Channels[CHANNEL_HEATER].pin);//digitalWriteFast(Channels[CHANNEL_HEATER].pin, LOW);
@@ -207,11 +217,10 @@ void timerIsr(void) { // ticks with 100µS
 
   timerTicks++;
 
-#ifdef WITH_CALIBRATION
-  if (zxLoopCalibration.iterations < zxCalibrationLoops) {
+
+if (zxLoopCalibration.iterations < zxCalibrationLoops) {
     zxLoopCalibration.measure[zxLoopCalibration.iterations]++;
-  }
-#endif
+}
 }
 // ----------------------------------------------------------------------------
 void abortWithError(int error) {
@@ -227,7 +236,6 @@ void setup() {
 #endif
   
   setupPins();
-  
  
   setupTFT();
 
@@ -239,10 +247,6 @@ void setup() {
     loadLastUsedProfile();
   }
 
-
-
-  
- 
   do {
     // wait for MAX chip to stabilize
    delay(500);
@@ -278,39 +282,87 @@ void setup() {
   displaySplash();
 #endif
 
+  Timer1.initialize(TIMER1_PERIOD_US);
+  Timer1.attachInterrupt(timerIsr);
+  attachInterrupt(INT_ZX, zeroCrossingIsr, RISING);
 
-#ifdef WITH_CALIBRATION
+
+  doCalibration();
+
+ setupMenu();
+
+  delay(100);
+}
+
+/*
+ * Calibrate main loop delay
+ * Calibrate zero cross tick per second (i.e.: detect Mains AC frequency)
+ * 
+ */
+void doCalibration() {
+  
+  // loop delay calibration
+  tft.fillRect_(0, 99, tft.width, 29, ST7735_WHITE);
   tft.setCursor(7, 99);  
-  tft.print("Calibrating... ");
+  tft.print("Calibrating LOOP_DELAY"); 
+#ifdef SERIAL_VERBOSE
+  Serial.print("Calibrating LOOP_DELAY"); 
+#endif
   delay(400);
 
-  // FIXME: does not work reliably
+
+  float tempZxLoopDelay = 0;
   while (zxLoopDelay == 0) {
     if (zxLoopCalibration.iterations == zxCalibrationLoops) { // average tick measurements, dump 1st value
-      for (int8_t l = 0; l < zxCalibrationLoops; l++) {
-        zxLoopDelay += zxLoopCalibration.measure[l];
+      for (uint8_t l = 0; l < zxCalibrationLoops; l++) {
+        tempZxLoopDelay += zxLoopCalibration.measure[l];
       }
-      zxLoopDelay /= zxCalibrationLoops;
+      zxLoopDelay = round(tempZxLoopDelay/(float)zxCalibrationLoops);
       zxLoopDelay -= 10; // compensating loop runtime
     }
   }
+  
+  tft.fillRect_(0, 99, tft.width, 10, ST7735_WHITE);
+  tft.setCursor(7, 99); 
+  tft.print("LOOP_DELAY = ");
   tft.print(zxLoopDelay);
-#else
-  zxLoopDelay = DEFAULT_LOOP_DELAY;
+#ifdef SERIAL_VERBOSE
+  Serial.print("LOOP_DELAY = ");
+  Serial.println(zxLoopDelay);
+#endif
+  delay(1000);
+
+  // zero cross ticks per second detection ( depends on mains frequency 50Hz / 60h )
+
+  tft.fillRect_(0, 109, tft.width, 19, ST7735_WHITE);
+  tft.setCursor(7, 109); 
+  tft.print("Detect mains frequency...");
+#ifdef SERIAL_VERBOSE
+  Serial.print("Detect mains frequency..."); 
 #endif
 
-//  setupMenu();
-  menuExit(Menu::actionDisplay); // reset to initial state
-  MenuEngine.navigate(&miCycleStart);
-  currentState = Settings;
-  menuUpdateRequest = true;
+  volatile float zxTicksStartCalibration = zeroCrossTicks;
+  volatile float zxTicksCalibration = 0;
+  volatile uint32_t startMillis = millis();
 
-  Timer1.initialize(TIMER1_PERIOD_US);
-  Timer1.attachInterrupt(timerIsr);
+  while (millis()-startMillis  < zxPerSecCalibrationTime);
+  zxTicksCalibration = zeroCrossTicks-zxTicksStartCalibration;
+  ticksPerSec = round(1000*zxTicksCalibration/(float)zxPerSecCalibrationTime);
+  
+  tft.fillRect_(0, 109, tft.width, 10, ST7735_WHITE);
+  tft.setCursor(7, 109); 
+  tft.print("MAINS FREQUENCY = ");
+  tft.print(ticksPerSec/2);
+  tft.print("Hz");
+#ifdef SERIAL_VERBOSE
+  Serial.print("MAINS FREQUENCY = ");
+  Serial.print(ticksPerSec/2 );  
+  Serial.println("Hz");
+#endif
 
-  attachInterrupt(INT_ZX, zeroCrossingIsr, RISING);
-  delay(100);
+delay(2000);
 }
+
 
 uint32_t lastRampTicks;
 uint32_t lastSoakTicks;
@@ -318,7 +370,7 @@ uint32_t lastSoakTicks;
 void updateRampSetpoint(bool down = false) {
   if (zeroCrossTicks > lastRampTicks + TICKS_PER_UPDATE) {
     double rate = (down) ? activeProfile.rampDownRate : activeProfile.rampUpRate;
-    Setpoint += (rate / (float)TICKS_PER_SEC * (zeroCrossTicks - lastRampTicks)) * ((down) ? -1 : 1);
+    Setpoint += (rate / (float)ticksPerSec * (zeroCrossTicks - lastRampTicks)) * ((down) ? -1 : 1);
     lastRampTicks = zeroCrossTicks;
   }
 }
@@ -326,7 +378,7 @@ void updateRampSetpoint(bool down = false) {
 void updateSoakSetpoint(bool down = false) {
   if (zeroCrossTicks > lastSoakTicks + TICKS_PER_UPDATE) {
     double rate = (activeProfile.soakTempB-activeProfile.soakTempA)/(float)activeProfile.soakDuration;
-    Setpoint += (rate / (float)TICKS_PER_SEC * (zeroCrossTicks - lastSoakTicks)) * ((down) ? -1 : 1);
+    Setpoint += (rate / (float)ticksPerSec * (zeroCrossTicks - lastSoakTicks)) * ((down) ? -1 : 1);
     lastSoakTicks = zeroCrossTicks;
   }
 }
@@ -475,7 +527,7 @@ void loop(void)
           collectTicks += airTemp[i].ticks;
         }
         float tempDiff = (airTemp[NUM_TEMP_READINGS - 1].temp - airTemp[0].temp);
-        float timeDiff = collectTicks / (float)(TICKS_PER_SEC);
+        float timeDiff = collectTicks / (float)(ticksPerSec);
         
         rampRate = tempDiff / timeDiff;
      
@@ -526,7 +578,7 @@ void loop(void)
 
         updateSoakSetpoint();
 
-        if (zeroCrossTicks - stateChangedTicks >= (uint32_t)activeProfile.soakDuration * TICKS_PER_SEC) {
+        if (zeroCrossTicks - stateChangedTicks >= (uint32_t)activeProfile.soakDuration * ticksPerSec) {
           currentState = RampUp;
         }
         break;
@@ -551,7 +603,7 @@ void loop(void)
           Setpoint = activeProfile.peakTemp;
         }
 
-        if (zeroCrossTicks - stateChangedTicks >= (uint32_t)activeProfile.peakDuration * TICKS_PER_SEC) {
+        if (zeroCrossTicks - stateChangedTicks >= (uint32_t)activeProfile.peakDuration * ticksPerSec) {
           currentState = RampDown;
         }
         break;
@@ -663,9 +715,10 @@ void loop(void)
 #endif
 
   Channels[CHANNEL_HEATER].target = heaterValue;
-
+#ifdef WITH_FAN
   double fanTmp = 90.0 / 100.0 * fanValue; // 0-100% -> 0-90° phase control
   Channels[CHANNEL_FAN].target = 90 - (uint8_t)fanTmp;
+#endif
 }
 
 

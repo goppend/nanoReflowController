@@ -62,29 +62,21 @@ uint16_t xOffset; // used for wraparound on x axis
 
 
 void setupTFT() {
-
-  
-    FastPin<ST7735_RST_PIN>::setOutput();
+  FastPin<ST7735_RST_PIN>::setOutput();
   FastPin<ST7735_RST_PIN>::hi();
   FastPin<ST7735_RST_PIN>::lo();
   delay(1);
   FastPin<ST7735_RST_PIN>::hi();
   
-   tft.begin();
-  
+  tft.begin();
+  tft.fillScreen(ST7735_WHITE);
   tft.setTextWrap(false);
   tft.setTextSize(1);
   tft.setRotation(LCD_ROTATION);
-    tft.fillScreen(ST7735_WHITE);
   tft.setTextColor(ST7735_BLACK, ST7735_WHITE);
 }
 
-void   setupMenu() {
-/*    menuExit(Menu::actionDisplay); // reset to initial state
-  MenuEngine.navigate(&miCycleStart);
-  currentState = Settings;
-  menuUpdateRequest = true;*/
-}
+
 
 void displaySplash() {
       tft.fillScreen(ST7735_WHITE);
@@ -208,7 +200,6 @@ bool menuExit(const Menu::Action_t a) {
   menuUpdateRequest = false;
   return false;
 }
-
 // ----------------------------------------------------------------------------
 
 bool menuDummy(const Menu::Action_t a) {
@@ -680,7 +671,7 @@ void updateProcessDisplay() {
   }
 
   // elapsed time
-  uint16_t elapsed = (zeroCrossTicks - startCycleZeroCrossTicks) / (float)(TICKS_PER_SEC);
+  uint16_t elapsed = (zeroCrossTicks - startCycleZeroCrossTicks) / (float)(ticksPerSec);
   tft.setCursor(tft.width()-35, y);
   alignRightPrefix(elapsed); 
   tft.print(elapsed);
@@ -767,6 +758,11 @@ void updateProcessDisplay() {
 }
 // ----------------------------------------------------------------------------
 
-
+void   setupMenu() {
+    menuExit(Menu::actionDisplay); // reset to initial state
+  MenuEngine.navigate(&miCycleStart);
+  currentState = Settings;
+  menuUpdateRequest = true;
+}
 
 #endif // UI_H
