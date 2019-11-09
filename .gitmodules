@@ -17,3 +17,6 @@
 [submodule "libraries/TimerOne"]
 	path = libraries/TimerOne
 	url = https://github.com/PaulStoffregen/TimerOne.git
+[submodule "libraries/Arduino-PID-AutoTune-Library"]
+	path = libraries/Arduino-PID-AutoTune-Library
+	url = https://github.com/br3ttb/Arduino-PID-AutoTune-Library
