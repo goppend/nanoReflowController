@@ -187,7 +187,7 @@ void zeroCrossingIsr(void) {
 // ----------------------------------------------------------------------------
 // timer interrupt handling
 
-void timerIsr(void) { // ticks with 100µS
+void timerIsr(void) { // ticks with 200µS
 
   // phase control for the fan 
   if (++phaseCounter > 90) {
