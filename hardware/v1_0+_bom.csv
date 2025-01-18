@@ -1,0 +1,47 @@
+#,Reference,Qty,Description,Value,Manufacturer,Part Number
+1,BZ1,1,Buzzer,,Same Sky,CEM-1205-IC
+2,C1,1,Ceramic Capacitor,"0.1uF, 10 V",Kemet,C0805C104K8RACTU
+3,C2,1,Poly Film Capacitor,1nF 200 V,Kemet,R82MC1100DQ50K
+4,C3,1,Aluminum Electrolytic Capacitor,10uF,Kemet,ESS106M025AB2AA
+5,C4,1,Aluminum Electrolytic Capacitor,10uF 10V,Kemet,ESK106M010AC3AA
+6,C5,1,Ceramic Capacitor,0.22uF,Kemet,C0805C224MMREC7210
+7,C6,1,Ceramic Capacitor,0.1uF,Kemet,C0805C104K3RACTU
+8,C7,1,Ceramic Capacitor,0.1uF,Kemet,C0805C104K3RACTU
+9,C8,1,Ceramic Capacitor,10uF,Kemet,C0805C106K9PACTU
+10,C9,1,Ceramic Capacitor,0.1 uF 6.3 V,Kemet,C0805C104K9RACTU
+11,C12,1,Ceramic Capacitor,0.01uF,Kemet,C0805C103K8RACTU
+12,D1,1,Bridge Rectifier,B40C1500A,Diotec,B40C1500A
+13,D2,1,Bridge Rectifier,B40C1500A,Diotec,B40C1500A
+14,D3,1,"Diode, signal",1N4148,ON Semi,1N4148
+15,D4,1,"Diode, rectifier",1N4007,Diotec,1N4007
+16,D5,1,Schottky diode,"40V, 2A",Diodes Inc,B240A-13-F
+17,F1,1,Fuse Holder,2A,Littelfuse,0PTF0078P
+18,F2,1,Fuse Holder,5A,Littelfuse,0PTF0078P
+19,HS1,1,Heatsink,,Bivar/Aavid,513102B02500G
+20,J1,1,Fan Header,12v FAN,TE Connectivity,640456-3
+21,J2,1,"Screw Terminal Block, 3 position",AC IN,Phoenix,1727023
+22,J3,1,"Screw Terminal Block, 2 position",HEATER,Phoenix,1727010
+23,"U2, U5",2,"Socket, 6-DIP",,Mill-Max,110-44-306-41-001000
+24,U1,1,"Socket, 28-DIP",,Assmann WSW,A 28-LC-TT 
+25,J8,1,"Screw Terminal Block, 2 position",K-TYPE,Phoenix,1727010
+26,L1,1,Inductor,"6 uH, 2.8A",Bourns,SRN6028C-6R0M
+27,Q1,1,"Transistor, NPN","40V, 0.8A",Central Semi,PN2222A PBFREE
+28,Q2,1,"Mosfet, N-Channel",IRF540N,International Rectifier,IRF540N
+29,Q3,1,Triac,BTA308X,WeEn Semiconductor,BTA308X
+30,R1,1,Resistor,220k,Stackpole,CF18JT220K
+31,R2,1,Resistor,220k,Stackpole,CF18JT220K
+32,R3,1,Resistor,22k,Stackpole,CF18JT22K0
+33,R4,1,Resistor,1k,Stackpole,CF18JT1K00
+34,R5,1,Resistor,100k,Stackpole,CF18JT100K
+35,R6,1,Resistor,4.7k,Stackpole,CF18JT4K70
+36,R7,1,Resistor,180,Stackpole,CF18JT180R
+37,R8,1,Resistor,1k,Stackpole,CF18JT1K00
+38,R9,1,Resistor,49.9k,KOA Speer,RK73H2ATTD4992F
+39,R10,1,Resistor,28k,KOA Speer,RK73H2ATTD2802F
+40,T1,1,Transformer,12 V,Zettler Magnetics,BV301S15010
+41,S1,1,Rotary Encoder,,Bourns,PEC16-2220F-S0024
+42,U2,1,"AC/DC NPN Optocoupler, DIP-6",H11AA1,Vishay,H11AA1
+43,U3,1,Positive 1.5A 35V Linear Regulator,LM340T-12/NOPB,Texas Instruments,LM340T-12/NOPB
+44,U4,1,"1.5A, Adjustable Step-Down Voltage Regulator",AP3211K,"Diodes, Inc",AP3211K
+45,U5,1,"Random Phase Opto-Triac, Vdrm 400V, Ift 30mA",MOC3020M,ON Semiconductor,MOC3020M
+46,U6,1,Type-K Thermocouple to Digital Interface,,Analog Devices,MAX6675
